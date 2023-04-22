@@ -146,12 +146,8 @@ async def login(username, password):
 
     url = 'https://cnlogin.cainiao.com/login?isNewLogin=true&showae=true&showoa=true&showin=true&redirectURL=http%3A%2F%2Fg.cainiao.com%2Fdashboard'
     width, height = 1366, 768
-
     browser = await pyppeteer.launch({
         'headless': False,  # 关闭无头模式
-        # 'userDataDir': r'D:\temporary',
-        # 'devtools': True,  # 打开 chromium 的 devtools
-        'executablePath': r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
         'args': [
             '--disable-extensions',
             '--hide-scrollbars',
@@ -166,27 +162,23 @@ async def login(username, password):
         ],
         'dumpio': True,
     })
-
-    # context = await browser.createIncognitoBrowserContext()  # 无痕
-
     page = await browser.newPage()
-
     await page_evaluate(page)  # 修改特征
     await page.goto(url)
-    await page.goto(url)
     frame = page.frames  # 获取所有的iframe
-    iframe = frame[1]
-
-    time.sleep(2)
-    print('刷新')
-    # await page.evaluate('''() =>{ location.reload(true)}''')
-    # time.sleep(20)
-    print('000')
+    # //*[@id="J_taobao"]/iframe
+    iframe = frame[0]
+    await page.waitFor(2000)
+    await iframe.click('#other-login-box > li:nth-child(1) > a')
     # 模拟输入 账号密码  {'delay': rand_int()} 为输入时间
-    await iframe.type('#fm-login-id', username, {'delay': random.randint(120, 161) - 50})
-    await asyncio.sleep(5)
-    await iframe.type('#fm-login-password', password, {'delay': random.randint(110, 161)})
-
+    await asyncio.sleep(2)
+    await page.waitFor('#alibaba-login-box')
+    frame02 = page.frames
+    iframe02 = frame02[1]
+    print(iframe02.name)
+    await iframe02.type('#fm-login-id', username, {'delay': random.randint(120, 161) - 50})
+    await page.waitFor(2000)
+    await iframe02.type('#fm-login-password', password, {'delay': random.randint(110, 161)})
     '''
     # 多层frame, 快速定位元素所在哪个frame中
     for i, b in enumerate(frame):
@@ -195,18 +187,16 @@ async def login(username, password):
             print(i, slider)
     '''
     await asyncio.sleep(2)
-
     # 登录
     # await iframe.click("#login-form > div.fm-btn > button")
     await asyncio.wait([
-        iframe.click('#login-form > div.fm-btn > button'),
+        iframe02.click('#login-form > div.fm-btn > button'),
+        # 此方法在页面跳转到一个新地址或重新加载时解析，如果你的代码会间接引起页面跳转，这个方法比较有用。
         page.waitForNavigation({'waitUntil': 'domcontentloaded'}),
     ])
-
     await iframe.waitFor(2000)
     await asyncio.sleep(5)
     time.sleep(5)
-
     try:
         for i, b in enumerate(frame):
             for j in b.childFrames:
@@ -230,7 +220,6 @@ async def login(username, password):
         iframe.click('#login-form > div.fm-btn > button'),
         page.waitForNavigation({'waitUntil': 'domcontentloaded'}),
     ])
-
     """
     # 查询神器
     for i, b in enumerate(frame):
@@ -244,28 +233,23 @@ async def login(username, password):
         iframe = frame[1]
         iframe_slider = iframe.childFrames[0]
         slider = await iframe_slider.xpath('//*[@id="J_Checkcode"]')
-
         await iframe_slider.click('#J_GetCode')  # 点击获取验证码
     except IndexError:
         ...
     else:
         if slider:
             # yzm = input('输入验证码:')
-
             yzm = get_note(phone='15388091192', task_type='SYCM')
-
             assert yzm
-
             await iframe_slider.type('#J_Checkcode', yzm)
-
             await iframe.waitFor(5000)
-
             # 确定
             await asyncio.wait([
                 iframe_slider.click('#btn-submit'),
                 page.waitForNavigation({'waitUntil': 'domcontentloaded'}),
             ])
-
     await iframe.waitFor(20000)
-
     await browser.close()
+
+
+asyncio.get_event_loop().run_until_complete(login('15616435916', '123456'))  # 获取一个事件循环，直到main()运行结束
